@@ -10,13 +10,47 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
+import com.crio.xlido.Entities.Answers;
+import com.crio.xlido.Entities.Event;
+import com.crio.xlido.Entities.Question;
+import com.crio.xlido.Entities.User;
+import com.crio.xlido.Repository.AnswerRepository;
+import com.crio.xlido.Repository.EventRepository;
+import com.crio.xlido.Repository.IAnswerRepository;
+import com.crio.xlido.Repository.IEventRepository;
+import com.crio.xlido.Repository.IQuestionRepository;
+import com.crio.xlido.Repository.IUserRepository;
+import com.crio.xlido.Repository.QuestionRepository;
+import com.crio.xlido.Repository.UserRepository;
+import com.crio.xlido.Sevices.AnswerService;
+import com.crio.xlido.Sevices.EventService;
+
+import com.crio.xlido.Sevices.QuestionService;
+
+import com.crio.xlido.Sevices.UserService;
+
+
 
 public class App {
+
+
+    private final IUserRepository userRepository = new UserRepository();
+    private final IEventRepository eventRepository = new EventRepository();
+    private final IQuestionRepository questionRepository = new QuestionRepository();
+    private final IAnswerRepository answerRepository = new AnswerRepository();
+
+    // Initialize services
+    private final UserService userService = new UserService(userRepository);
+    private final EventService eventService = new EventService(eventRepository, userRepository);
+    private final QuestionService questionService = new QuestionService(questionRepository, eventRepository, userRepository);
+    private final AnswerService answerService = new AnswerService(questionRepository, userRepository, answerRepository,eventRepository);
+
     public static void main(String[] args) {
 
         // Test your code by ading commands in sample_input/sample_input_one.txt
         // Run run.sh script using "bash run.sh" in your terminal.
-        if (args.length == 1){
+        if (args.length == 1) {
             List<String> commandLineArgs = new LinkedList<>(Arrays.asList(args));
             String inputFile = commandLineArgs.get(0).split("=")[1];
             try {
@@ -27,53 +61,140 @@ public class App {
                 e.printStackTrace();
             }
             return;
-        }        
+        }
 
         // OR
         // Test your code by adding commands in this list
-        List<String> inplace_commands = new LinkedList<>(){
+        List<String> inplace_commands = new LinkedList<>() {
             {
             }
         };
 
         new App().run(inplace_commands);
- 
+
     }
-    public void run(List<String> commands){
+
+    public void run(List<String> commands) {
 
         Iterator<String> it = commands.iterator();
-        while(it.hasNext()){
+        while (it.hasNext()) {
             String line = it.next();
-                if(line == null){
-                    break;
-                }
-                List<String> tokens = Arrays.asList(line.split(","));
+            if (line == null) {
+                break;
+            }
+            List<String> tokens = Arrays.asList(line.split(","));
 
-                try {
-                    //Execute Services
-                    switch(tokens.get(0)){
-                        case "CREATE_USER":
+            try {
+                // Execute Services
+                switch (tokens.get(0)) {
+                    case "CREATE_USER":
+                        CREATE_USER(tokens);
                         break;
-                        case "CREATE_EVENT":
+                    case "CREATE_EVENT":
+                        CREATE_EVENT(tokens);
                         break;
-                        case "DELETE_EVENT":
+                    case "DELETE_EVENT":
+                        DELETE_EVENT(tokens);
                         break;
-                        case "ADD_QUESTION":
+                    case "ADD_QUESTION":
+                    CREATE_QUESTION(tokens);
                         break;
-                        case "DELETE_QUESTION":
+                    case "DELETE_QUESTION":
+                    DELETE_QUESTION(tokens);
                         break;
-                        case "UPVOTE_QUESTION":
+                    case "UPVOTE_QUESTION":
+                          UPVOTE_QUESTION(tokens);
                         break;
-                        case "REPLY_QUESTION":
+                    case "REPLY_QUESTION":
+                    REPLY_QUESTION(tokens);
                         break;
-                        case "LIST_QUESTIONS":
+                    case "LIST_QUESTIONS":
+                    LIST_QUESTIONS(tokens);
                         break;
-                        default:
-                            throw new RuntimeException("INVALID_COMMAND");
+                    default:
+                        throw new RuntimeException("INVALID_COMMAND");
                 }
-                } catch (Exception e) {
-                    System.out.println("ERROR: " + e.getMessage());
-                }
+            } catch (Exception e) {
+              //  e.printStackTrace();
+                System.out.println("ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    // CREATE_USER
+    private void CREATE_USER(List<String> tokens) {
+        String userName = tokens.get(1);
+        String email = tokens.get(2);
+        User user = userService.createUser(userName, email);
+        System.out.println("User ID: " + user.getId());
+    }
+
+
+    private void CREATE_EVENT(List<String> tokens) {
+
+        String eventName = tokens.get(1);
+        Long userId = Long.parseLong(tokens.get(2));
+        Event event = eventService.creatEvent(eventName, userId);
+        System.out.println("Event ID: " + event.getId());
+
+    }
+
+    private void DELETE_EVENT(List<String> tokens) {
+
+        Long eventId = Long.parseLong(tokens.get(1));
+        Long userId = Long.parseLong(tokens.get(2));
+        Event event = eventService.deleteEvent(eventId, userId);
+        System.out.println("EVENT_DELETED " + event.getId());
+    }
+
+    private void CREATE_QUESTION(List<String> tokens){
+        String content = tokens.get(1);
+        Long eventId = Long.parseLong(tokens.get(3));
+        Long userId = Long.parseLong(tokens.get(2));
+        Question question = questionService.createQuestion(new Question(content, userId, eventId));
+        System.out.println("Question ID: "+question.getId());
+    }
+
+    private void DELETE_QUESTION(List<String> tokens){
+        Long quesId = Long.parseLong(tokens.get(1));
+        Long userId = Long.parseLong(tokens.get(2));
+        Question question = questionService.deleteQuestion(quesId, userId);
+        System.out.println("QUESTION_DELETED "+question.getId());
+    }
+     private void UPVOTE_QUESTION(List<String> tokens){
+        Long quesId = Long.parseLong(tokens.get(1));
+        Long userId = Long.parseLong(tokens.get(2));
+        Question question = questionService.upvoteQuestions(quesId, userId);
+        //System.out.println(question);
+        System.out.println("QUESTION_UPVOTED "+question.getId());
+
+     }
+
+     private void REPLY_QUESTION(List<String> tokens){
+        String content = tokens.get(1);
+        Long quesId = Long.parseLong(tokens.get(2));
+        Long userId = Long.parseLong(tokens.get(3));
+
+        answerService.createAnswers(new Answers(content, userId, quesId));
+       // System.out.println(answers);
+        System.out.println("REPLY_ADDED");
+     }
+
+     private void LIST_QUESTIONS(List<String> tokens) {
+        Long eventId = Long.parseLong(tokens.get(1));
+        String sortedBy = tokens.get(2);
+        List<Question> questions = answerService.orderList(eventId, sortedBy);
+        for (Question question : questions) {
+            System.out.println("Question ID: " + question.getId());
+            System.out.println("Content: " + question.getContent());
+            System.out.println("Votes: " + question.getUpvote());
+            Optional<Answers> answers = answerRepository.findById(question.getId());
+            if (answers.isPresent()) {
+                Answers answer = answers.get();
+                System.out.println("Replies:\n  - User " + answer.getUserId() + ": " + answer.getContentString() + "\n");
+            } else {
+                System.out.println("Replies:\n");
+            }
         }
     }
 }
